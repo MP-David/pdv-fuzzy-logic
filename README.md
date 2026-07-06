@@ -1,97 +1,109 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# PDV Fuzzy Logic — Bonificação Dinâmica com Lógica Fuzzy
 
-# Getting Started
+MVP em React Native que simula um PDV (ponto de venda) onde a taxa de **cashback**
+concedida ao cliente é calculada dinamicamente por um **motor de inferência fuzzy
+(Mamdani)**, em vez de regras fixas de desconto.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> Projeto acadêmico — UTFPR, disciplina de Sistemas Inteligentes Aplicados.
 
-## Step 1: Start Metro
+## Ideia
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+Programas de fidelidade tradicionais usam faixas fixas ("gastou R$100, ganha 5%").
+Esse MVP demonstra como a lógica fuzzy permite uma bonificação mais suave e
+contextual, combinando duas variáveis do cliente/compra:
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **Valor do ticket** (R$ gasto no carrinho)
+- **Engajamento do cliente** (score sintético de 0 a 100)
+
+para produzir uma **taxa de cashback (%)** que reflete o quão fortemente a compra
+se encaixa em cada perfil, em vez de saltar abruptamente entre faixas.
+
+## Como funciona o motor fuzzy
+
+Implementado em `src/fuzzy/`, seguindo o pipeline clássico de inferência Mamdani:
+
+1. **Fuzzificação** (`sets.ts`) — cada variável de entrada é mapeada em conjuntos
+   linguísticos via funções de pertinência triangulares/trapezoidais
+   (`membershipFunctions.ts`):
+   - Ticket: `baixo`, `medio`, `alto`
+   - Engajamento: `iniciante`, `frequente`, `vip`
+   - Saída (cashback): `minimo`, `padrao`, `premium`
+2. **Base de regras** (`rules.ts`) — matriz 3x3 (Ticket × Engajamento → Cashback),
+   por exemplo `Alto + VIP → Premium` e `Médio + Frequente → Padrão`.
+3. **Inferência e agregação** (`inference.ts`) — cada regra é avaliada com
+   T-norma mínimo (força da regra = `min` das pertinências de entrada) e as
+   regras que apontam para a mesma saída são combinadas com S-norma máximo.
+4. **Defuzzificação** — método do centroide sobre o domínio de saída (0–10%),
+   retornando a taxa final de cashback aplicada ao valor do carrinho.
+
+O hook `useFuzzyCashback.ts` conecta esse motor (funções puras) ao ciclo de
+renderização do React, recalculando apenas quando ticket ou engajamento mudam.
+
+## App
+
+- **Catálogo** (`CatalogScreen`) — lista de produtos mockados, permite montar um
+  carrinho.
+- **Carrinho** (`CartScreen`) — mostra os itens, permite escolher/simular o
+  perfil do cliente (via botões de perfil pré-definidos ou um slider de
+  engajamento) e exibe em tempo real:
+  - o grau de pertinência do ticket e do engajamento em cada conjunto fuzzy;
+  - quais regras foram ativadas e com que força;
+  - a taxa de cashback resultante e o valor final em reais.
+
+Dados mockados em `src/data/products.ts` e `src/data/customers.ts`.
+
+## Stack
+
+- React Native 0.86 + React 19, TypeScript
+- `@react-native-community/slider` para o controle de engajamento
+- `react-native-safe-area-context`
+- Jest para testes do motor fuzzy (`src/fuzzy/*.test.ts`)
+
+## Rodando o projeto
+
+> Siga primeiro o guia [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment)
+> do React Native.
+
+Instale as dependências:
 
 ```sh
-# Using npm
+npm install
+```
+
+Inicie o Metro:
+
+```sh
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+Em outro terminal, rode no Android ou iOS:
 
 ```sh
-# Using npm
 npm run android
-
-# OR using Yarn
-yarn android
+# ou
+npm run ios
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Para iOS, instale as dependências nativas antes do primeiro build:
 
 ```sh
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Testes e lint
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+npm test
+npm run lint
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Estrutura
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+```
+src/
+  data/            produtos e perfis de clientes mockados
+  fuzzy/           motor de inferência fuzzy (sets, regras, inferência, hook)
+  screens/         telas de Catálogo e Carrinho
+  types.ts         tipos e helpers do carrinho
+```
